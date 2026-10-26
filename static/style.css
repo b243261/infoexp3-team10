@@ -1,1 +1,128 @@
-body{font-family:system-ui,sans-serif;background:#f8fafc;color:#172033;margin:0}main{max-width:720px;margin:40px auto;padding:24px}form,.message{background:white;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin:14px 0}input,textarea,button{font:inherit;width:100%;padding:10px;margin:6px 0;box-sizing:border-box}textarea{min-height:90px}button{background:#2563eb;color:white;border:0;border-radius:8px;font-weight:700}.meta{color:#64748b;font-size:.85rem}
+body {
+  font-family: system-ui, sans-serif;
+  background: #f8fafc;
+  color: #172033;
+  margin: 0;
+}
+
+.header {
+  text-align: center;
+  padding: 32px 16px 8px;
+}
+
+.header h1 {
+  margin: 0 0 8px;
+  font-size: 2rem;
+}
+
+.header p {
+  margin: 0;
+  color: #64748b;
+}
+
+/* 3カラムレイアウト構成 */
+main {
+  max-width: 1100px;
+  margin: 20px auto;
+  padding: 24px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  main {
+    grid-template-columns: 1fr;
+  }
+}
+
+.column h2 {
+  font-size: 1.1rem;
+  margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+/* 指定いただいたスタイル定義 */
+form, .message, .poll-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 14px 0;
+}
+
+input, textarea, button {
+  font: inherit;
+  width: 100%;
+  padding: 10px;
+  margin: 6px 0;
+  box-sizing: border-box;
+}
+
+textarea {
+  min-height: 90px;
+}
+
+button {
+  background: #2563eb;
+  color: white;
+  border: 0;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #1d4ed8;
+}
+
+.meta {
+  color: #64748b;
+  font-size: .85rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 投票・ブックマーク用補足スタイル */
+.btn-bookmark {
+  background: none;
+  border: none;
+  color: #eab308;
+  font-size: 1.2rem;
+  width: auto;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.btn-vote {
+  background: #f1f5f9;
+  color: #172033;
+  border: 1px solid #cbd5e1;
+  font-weight: normal;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.btn-vote:hover {
+  background: #e2e8f0;
+}
+
+.poll-progress {
+  background: #e2e8f0;
+  border-radius: 4px;
+  height: 6px;
+  overflow: hidden;
+  margin: 2px 0 10px;
+}
+
+.poll-bar {
+  background: #2563eb;
+  height: 100%;
+}
