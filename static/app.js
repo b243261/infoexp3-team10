@@ -90,6 +90,12 @@ document.querySelector('#form').addEventListener('submit', async e => {
   document.querySelector('#status').textContent = r.ok ? '投稿しました' : '投稿に失敗しました';
   if (r.ok) {
     document.querySelector('#message').value = '';
+    const charCount = document.getElementById('char-count');
+    if (charCount) {
+      charCount.textContent = '0';
+      charCount.style.color = 'inherit';
+      charCount.style.fontWeight = 'normal';
+    }
     await loadMessages();
   }
 });
