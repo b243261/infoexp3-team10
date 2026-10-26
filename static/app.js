@@ -94,6 +94,24 @@ document.querySelector('#form').addEventListener('submit', async e => {
   }
 });
 
+// 文字数表示機能
+const messageInput = document.getElementById('message');
+const charCount = document.getElementById('char-count');
+
+// 入力イベントを監視して文字数を更新
+messageInput.addEventListener('input', () => {
+  const currentLength = messageInput.value.length;
+  charCount.textContent = currentLength;
+
+  // 300文字ギリギリ（例: 290文字以上）になったら文字を赤くする
+  if (currentLength >= 290) {
+    charCount.style.color = 'red';
+    charCount.style.fontWeight = 'bold';
+  } else {
+    charCount.style.color = 'inherit';
+    charCount.style.fontWeight = 'normal';
+  }
+});
 
 // --- 2. 投票（Poll）機能 (API連携版) ---
 

@@ -25,6 +25,12 @@
       <form id="form">
         <input id="name" maxlength="30" placeholder="Nickname" required>
         <textarea id="message" maxlength="300" placeholder="Message" required></textarea>
+        
+        <!-- ▼ ここに追加（28行目〜30行目として挿入） ▼ -->
+        <div style="text-align: right; font-size: 0.85em; color: #666; margin-bottom: 8px;">
+          <span id="char-count">0</span> / 300
+        </div>
+        
         <button>投稿</button>
       </form>
       <p id="status"></p>
