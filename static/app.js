@@ -120,7 +120,7 @@ function renderPoll() {
       const percent = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
       return `
         <div style="margin-bottom: 8px;">
-          <button type="button" class="btn-vote" onclick="vote(${poll.id}, ${opt.id})">
+          <button type="button" class="btn-vote" onclick="vote(${poll.id}, ${opt.id})" ${poll.has_voted ? 'disabled' : ''}>
             <span>${escapeHtml(opt.text)}</span>
             <b>${opt.votes}票 (${percent}%)</b>
           </button>
@@ -134,6 +134,7 @@ function renderPoll() {
     return `
       <div class="poll-card">
         <b style="display:block; margin-bottom: 12px;">${escapeHtml(poll.question)}</b>
+        ${poll.has_voted ? '<p class="meta">この投票には投票済みです。</p>' : ''}
         ${optionsHtml}
         <div class="meta" style="margin-top: 12px;">総投票数: ${totalVotes}票</div>
       </div>
@@ -166,6 +167,13 @@ async function vote(pollId, optionId) {
 
   if (r.ok) {
     await loadPolls(); // 最新の得票数をサーバーから再取得して再描画
+  } else {
+    const result = await r.json();
+    if (result.error === 'already voted') {
+      await loadPolls();
+    } else {
+      console.error('投票に失敗しました', result.error);
+    }
   }
 }
 

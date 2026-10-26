@@ -1,10 +1,13 @@
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, session
 from pathlib import Path
+import os
+import secrets
 import sqlite3
 from datetime import datetime, timezone
 
 app = Flask(__name__)
 DB = Path("data/miniboard.db")
+
 
 def connect():
     DB.parent.mkdir(exist_ok=True)
@@ -12,6 +15,40 @@ def connect():
     con.row_factory = sqlite3.Row
     con.execute("PRAGMA foreign_keys = ON")
     return con
+
+
+def load_secret_key():
+    configured_key = os.environ.get("FLASK_SECRET_KEY")
+    if configured_key:
+        return configured_key
+
+    with connect() as con:
+        con.execute("""CREATE TABLE IF NOT EXISTS app_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )""")
+        con.execute(
+            "INSERT OR IGNORE INTO app_settings(key, value) VALUES(?, ?)",
+            ("flask_secret_key", secrets.token_hex(32))
+        )
+        row = con.execute(
+            "SELECT value FROM app_settings WHERE key = ?",
+            ("flask_secret_key",)
+        ).fetchone()
+    return row["value"]
+
+
+app.config["SECRET_KEY"] = load_secret_key()
+
+
+def get_voter_id():
+    voter_id = session.get("voter_id")
+    if voter_id is None:
+        voter_id = secrets.token_urlsafe(32)
+        session["voter_id"] = voter_id
+        session.permanent = True
+    return voter_id
+
 
 def init_db():
     with connect() as con:
@@ -38,6 +75,17 @@ def init_db():
             votes INTEGER NOT NULL DEFAULT 0,
             FOREIGN KEY (poll_id) REFERENCES polls(id) ON DELETE CASCADE
         )""")
+
+        con.execute("""CREATE TABLE IF NOT EXISTS poll_votes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            poll_id INTEGER NOT NULL,
+            option_id INTEGER NOT NULL,
+            voter_id TEXT NOT NULL,
+            UNIQUE (poll_id, voter_id),
+            FOREIGN KEY (poll_id) REFERENCES polls(id) ON DELETE CASCADE,
+            FOREIGN KEY (option_id) REFERENCES poll_options(id) ON DELETE CASCADE
+        )""")
+
 
 @app.get("/")
 def index():
@@ -88,14 +136,22 @@ def delete_message(message_id):
 
 @app.get("/api/polls")
 def get_polls():
+    voter_id = get_voter_id()
     with connect() as con:
         polls = [dict(r) for r in con.execute("SELECT * FROM polls ORDER BY id DESC").fetchall()]
+        voted_poll_ids = {
+            row["poll_id"] for row in con.execute(
+                "SELECT poll_id FROM poll_votes WHERE voter_id = ?",
+                (voter_id,)
+            ).fetchall()
+        }
         for poll in polls:
             options = con.execute(
                 "SELECT id, text, votes FROM poll_options WHERE poll_id = ? ORDER BY id ASC", 
                 (poll["id"],)
             ).fetchall()
             poll["options"] = [dict(opt) for opt in options]
+            poll["has_voted"] = poll["id"] in voted_poll_ids
     return jsonify(polls)
 
 @app.post("/api/polls")
@@ -133,6 +189,7 @@ def create_poll():
 def vote_poll(poll_id):
     data = request.get_json(silent=True) or {}
     option_id = data.get("option_id")
+    voter_id = get_voter_id()
     
     if not option_id or not isinstance(option_id, int):
         return jsonify({"error": "valid option_id is required"}), 400
@@ -147,7 +204,14 @@ def vote_poll(poll_id):
         if not opt:
             return jsonify({"error": "option or poll not found"}), 404
         
-        # 得票数を+1加算
+        vote = con.execute(
+            """INSERT OR IGNORE INTO poll_votes(poll_id, option_id, voter_id)
+               VALUES(?, ?, ?)""",
+            (poll_id, option_id, voter_id)
+        )
+        if vote.rowcount == 0:
+            return jsonify({"error": "already voted"}), 409
+
         con.execute("UPDATE poll_options SET votes = votes + 1 WHERE id = ?", (option_id,))
         new_votes = opt["votes"] + 1
 
@@ -155,7 +219,8 @@ def vote_poll(poll_id):
         "ok": True,
         "poll_id": poll_id,
         "option_id": option_id,
-        "votes": new_votes
+        "votes": new_votes,
+        "has_voted": True
     })
 
 if __name__ == "__main__":
