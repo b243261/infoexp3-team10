@@ -3,7 +3,7 @@ from pathlib import Path
 import os
 import secrets
 import sqlite3
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 app = Flask(__name__)
 DB = Path("data/miniboard.db")
@@ -84,6 +84,13 @@ def init_db():
             UNIQUE (poll_id, voter_id),
             FOREIGN KEY (poll_id) REFERENCES polls(id) ON DELETE CASCADE,
             FOREIGN KEY (option_id) REFERENCES poll_options(id) ON DELETE CASCADE
+        )""")
+
+        con.execute("""CREATE TABLE IF NOT EXISTS events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            event_date TEXT NOT NULL,
+            created_at TEXT NOT NULL
         )""")
 
 
@@ -222,6 +229,44 @@ def vote_poll(poll_id):
         "votes": new_votes,
         "has_voted": True
     })
+
+@app.get("/api/events")
+def get_events():
+    with connect() as con:
+        rows = con.execute("SELECT * FROM events ORDER BY event_date ASC, id ASC").fetchall()
+    return jsonify([dict(r) for r in rows])
+
+@app.post("/api/events")
+def create_event():
+    data = request.get_json(silent=True) or {}
+    title = str(data.get("title", "")).strip()[:100]
+    event_date = str(data.get("event_date", "")).strip()
+    
+    if not title or not event_date:
+        return jsonify({"error": "title and event_date are required"}), 400
+    try:
+        parsed_event_date = date.fromisoformat(event_date)
+    except ValueError:
+        return jsonify({"error": "event_date must be a valid YYYY-MM-DD date"}), 400
+    if parsed_event_date.isoformat() != event_date:
+        return jsonify({"error": "event_date must be a valid YYYY-MM-DD date"}), 400
+
+    created_at = datetime.now(timezone.utc).isoformat()
+    with connect() as con:
+        cur = con.execute(
+            "INSERT INTO events(title, event_date, created_at) VALUES(?, ?, ?)",
+            (title, event_date, created_at)
+        )
+        row = con.execute("SELECT * FROM events WHERE id=?", (cur.lastrowid,)).fetchone()
+    return jsonify(dict(row)), 201
+
+@app.delete("/api/events/<int:event_id>")
+def delete_event(event_id):
+    with connect() as con:
+        cur = con.execute("DELETE FROM events WHERE id=?", (event_id,))
+        if cur.rowcount == 0:
+            return jsonify({"error": "not found"}), 404
+    return "", 204
 
 if __name__ == "__main__":
     init_db()

@@ -1,6 +1,9 @@
 let currentMessages = [];
 let bookmarkedIds = JSON.parse(localStorage.getItem('bookmarked_ids') || '[]');
 let pollsData = [];
+let eventsData = [];
+let selectedCalendarDate = new Date();
+let visibleCalendarMonth = new Date();
 
 function escapeHtml(s) {
   const d = document.createElement('div');
@@ -226,6 +229,182 @@ async function handleCreatePoll(e) {
   }
 }
 
+// --- 3. カレンダー・予定機能 ---
+
+function dateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatCalendarDate(date) {
+  return new Intl.DateTimeFormat('ja-JP', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short'
+  }).format(date);
+}
+
+async function loadEvents() {
+  const status = document.querySelector('#event-status');
+  try {
+    const response = await fetch('/api/events');
+    if (!response.ok) throw new Error(`予定の取得に失敗しました (${response.status})`);
+    eventsData = await response.json();
+    renderCalendar();
+    renderSelectedDateEvents();
+  } catch (error) {
+    status.textContent = error.message;
+  }
+}
+
+function renderCalendar() {
+  const grid = document.querySelector('#calendar-grid');
+  const monthHeading = document.querySelector('#calendar-month');
+  if (!grid || !monthHeading) return;
+
+  const year = visibleCalendarMonth.getFullYear();
+  const month = visibleCalendarMonth.getMonth();
+  monthHeading.textContent = new Intl.DateTimeFormat('ja-JP', {
+    year: 'numeric',
+    month: 'long'
+  }).format(visibleCalendarMonth);
+
+  const firstWeekday = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cellCount = Math.ceil((firstWeekday + daysInMonth) / 7) * 7;
+  const today = dateKey(new Date());
+
+  grid.innerHTML = Array.from({ length: cellCount }, (_, index) => {
+    const date = new Date(year, month, index - firstWeekday + 1);
+    const key = dateKey(date);
+    const eventCount = eventsData.filter(event => event.event_date === key).length;
+    const classes = [
+      'calendar-day',
+      date.getMonth() !== month ? 'is-outside' : '',
+      key === dateKey(selectedCalendarDate) ? 'is-selected' : '',
+      key === today ? 'is-today' : ''
+    ].filter(Boolean).join(' ');
+    return `
+      <button type="button" class="${classes}" data-calendar-date="${key}"
+        aria-pressed="${key === dateKey(selectedCalendarDate)}"
+        aria-label="${formatCalendarDate(date)}${eventCount ? `、予定${eventCount}件` : ''}">
+        <span class="calendar-day-number">${date.getDate()}</span>
+        <span class="calendar-event-indicator">${eventCount ? `● ${eventCount}件` : ''}</span>
+      </button>
+    `;
+  }).join('');
+}
+
+function renderSelectedDateEvents() {
+  const heading = document.querySelector('#selected-date-heading');
+  const dateInput = document.querySelector('#event-date');
+  const container = document.querySelector('#event-list');
+  if (!heading || !dateInput || !container) return;
+
+  const key = dateKey(selectedCalendarDate);
+  heading.textContent = `${formatCalendarDate(selectedCalendarDate)}の予定`;
+  dateInput.value = key;
+  const selectedEvents = eventsData.filter(event => event.event_date === key);
+
+  if (selectedEvents.length === 0) {
+    container.innerHTML = '<p class="meta">この日の予定はありません。</p>';
+    return;
+  }
+
+  container.innerHTML = selectedEvents.map(event => `
+    <article class="event-item">
+      <span>${escapeHtml(event.title)}</span>
+      <button type="button" class="event-delete" data-delete-event="${event.id}"
+        aria-label="${escapeHtml(event.title)}を削除">削除</button>
+    </article>
+  `).join('');
+}
+
+document.querySelector('#calendar-grid').addEventListener('click', event => {
+  const button = event.target.closest('[data-calendar-date]');
+  if (!button) return;
+  const [year, month, day] = button.dataset.calendarDate.split('-').map(Number);
+  selectedCalendarDate = new Date(year, month - 1, day);
+  visibleCalendarMonth = new Date(year, month - 1, 1);
+  renderCalendar();
+  renderSelectedDateEvents();
+});
+
+document.querySelector('#calendar-prev').addEventListener('click', () => {
+  visibleCalendarMonth = new Date(
+    visibleCalendarMonth.getFullYear(),
+    visibleCalendarMonth.getMonth() - 1,
+    1
+  );
+  renderCalendar();
+});
+
+document.querySelector('#calendar-next').addEventListener('click', () => {
+  visibleCalendarMonth = new Date(
+    visibleCalendarMonth.getFullYear(),
+    visibleCalendarMonth.getMonth() + 1,
+    1
+  );
+  renderCalendar();
+});
+
+document.querySelector('#event-date').addEventListener('change', event => {
+  if (!event.target.value) return;
+  const [year, month, day] = event.target.value.split('-').map(Number);
+  selectedCalendarDate = new Date(year, month - 1, day);
+  visibleCalendarMonth = new Date(year, month - 1, 1);
+  renderCalendar();
+  renderSelectedDateEvents();
+});
+
+document.querySelector('#event-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const status = document.querySelector('#event-status');
+  const title = document.querySelector('#event-title').value.trim();
+  const eventDate = document.querySelector('#event-date').value;
+  if (!title || !eventDate) return;
+
+  try {
+    const response = await fetch('/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, event_date: eventDate })
+    });
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.error || `予定の追加に失敗しました (${response.status})`);
+    }
+    document.querySelector('#event-title').value = '';
+    status.textContent = '予定を追加しました。';
+    await loadEvents();
+  } catch (error) {
+    status.textContent = error.message;
+  }
+});
+
+document.querySelector('#event-list').addEventListener('click', async event => {
+  const button = event.target.closest('[data-delete-event]');
+  if (!button) return;
+
+  const status = document.querySelector('#event-status');
+  try {
+    const response = await fetch(`/api/events/${button.dataset.deleteEvent}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error(`予定の削除に失敗しました (${response.status})`);
+    status.textContent = '予定を削除しました。';
+    await loadEvents();
+  } catch (error) {
+    status.textContent = error.message;
+  }
+});
+
 // 初期化実行
 loadMessages();
 loadPolls();
+renderCalendar();
+renderSelectedDateEvents();
+loadEvents();

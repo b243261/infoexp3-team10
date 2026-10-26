@@ -42,6 +42,36 @@
       <h2>ブックマーク一覧</h2>
       <section id="bookmarks"></section>
     </section>
+
+    <section class="column calendar-column">
+      <h2>カレンダー</h2>
+      <div class="calendar-layout">
+        <section class="calendar-panel" aria-label="予定カレンダー">
+          <div class="calendar-toolbar">
+            <button type="button" id="calendar-prev" class="calendar-nav" aria-label="前の月">‹</button>
+            <h3 id="calendar-month" aria-live="polite"></h3>
+            <button type="button" id="calendar-next" class="calendar-nav" aria-label="次の月">›</button>
+          </div>
+          <div class="calendar-grid calendar-weekdays" aria-hidden="true">
+            <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
+          </div>
+          <div id="calendar-grid" class="calendar-grid" role="group" aria-label="日付"></div>
+        </section>
+
+        <section class="calendar-details">
+          <h3 id="selected-date-heading"></h3>
+          <form id="event-form">
+            <label for="event-date">日付</label>
+            <input id="event-date" type="date" required>
+            <label for="event-title">予定</label>
+            <input id="event-title" type="text" maxlength="100" placeholder="予定を入力" required>
+            <button type="submit">予定を追加</button>
+          </form>
+          <p id="event-status" role="status" aria-live="polite"></p>
+          <div id="event-list" aria-live="polite"></div>
+        </section>
+      </div>
+    </section>
   </main>
 
   <script src="/static/app.js"></script>

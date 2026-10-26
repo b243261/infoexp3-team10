@@ -126,3 +126,140 @@ button:hover {
   background: #2563eb;
   height: 100%;
 }
+
+.calendar-column {
+  grid-column: 1 / -1;
+}
+
+.calendar-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.calendar-panel,
+.calendar-details {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.calendar-toolbar {
+  display: grid;
+  grid-template-columns: 40px 1fr 40px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.calendar-toolbar h3,
+.calendar-details h3 {
+  margin: 0;
+  text-align: center;
+}
+
+.calendar-nav {
+  margin: 0;
+  padding: 4px;
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.calendar-weekdays {
+  margin-bottom: 4px;
+  text-align: center;
+  color: #64748b;
+  font-size: .85rem;
+}
+
+.calendar-day {
+  min-height: 56px;
+  margin: 0;
+  padding: 6px 2px;
+  background: #f8fafc;
+  color: #172033;
+  border: 1px solid #e2e8f0;
+  font-weight: 400;
+}
+
+.calendar-day:hover,
+.calendar-day.is-selected {
+  background: #dbeafe;
+  border-color: #2563eb;
+  color: #172033;
+}
+
+.calendar-day.is-outside {
+  color: #94a3b8;
+  background: #fff;
+}
+
+.calendar-day.is-today {
+  font-weight: 700;
+}
+
+.calendar-day-number {
+  display: block;
+}
+
+.calendar-event-indicator {
+  display: block;
+  min-height: 1em;
+  color: #2563eb;
+  font-size: .7rem;
+}
+
+.calendar-details form {
+  margin-bottom: 12px;
+}
+
+.calendar-details label {
+  display: block;
+  margin-top: 8px;
+  font-size: .9rem;
+  font-weight: 600;
+}
+
+.event-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.event-item:last-child {
+  border-bottom: 0;
+}
+
+.event-delete {
+  width: auto;
+  margin: 0;
+  padding: 6px 10px;
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.event-delete:hover {
+  background: #fecaca;
+}
+
+#event-status {
+  min-height: 1.5em;
+  color: #b91c1c;
+}
+
+@media (max-width: 768px) {
+  .calendar-layout {
+    grid-template-columns: 1fr;
+  }
+}
